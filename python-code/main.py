@@ -2,85 +2,111 @@ from enum import Enum
 from collections import Counter
 from z3 import *
 
-def gen_mat_id(from_symbol: int, to_symbol: int):
-    return Int("mat[" + str(from_symbol) + "]" + "[" + str(to_symbol) + "]")
+def get_mat_id(m: str, from_symbol: int, to_symbol: int):
+    return Int(m + "[" + str(from_symbol) + "]" + "[" + str(to_symbol) + "]")
 
-def solve(goal: list[int]):
+def mat_mult(symbols: list, m1: str, m2: str, m3: str):
+    conds = []
+    for row_symbol in symbols:
+        for col_symbol in symbols:
+            mult_ops = []
+            for iter_symbol in symbols:
+                m1_ri = get_mat_id(m1, row_symbol, iter_symbol)
+                m2_ic = get_mat_id(m2, iter_symbol, col_symbol)
+                mult_ops.append(m1_ri * m2_ic)
+            dot_prod = Sum(mult_ops)
+
+            result_rc = get_mat_id(m3, row_symbol, col_symbol)
+            conds.append(result_rc == dot_prod)
+    return And(conds)
+
+def mat_vec_mult(symbols: list, m1: str, v1: str, v2: str):
+    conds = []
+    for row_symbol in symbols:
+        mult_ops = []
+        for iter_symbol in symbols:
+            m1_ri = get_mat_id(m1, row_symbol, iter_symbol)
+            v1_i0 = get_mat_id(v1, iter_symbol, 0)
+            mult_ops.append(m1_ri * v1_i0)
+        dot_prod = Sum(mult_ops)
+
+        result_rc = get_mat_id(v2, row_symbol, 0)
+        conds.append(result_rc == dot_prod)
+    return And(conds)
+
+def vec_eq(symbols: list, v1: str, v2: str):
+    conds = []
+    for iter_symbol in symbols:
+        v1_i0 = get_mat_id(m1, iter_symbol, 0)
+        v2_i0 = get_mat_id(v1, iter_symbol, 0)
+        conds.append(v1_i0 == v2_i0)
+    return And(conds)
+
+def hist_eq(symbol_hist: Counter, v: str):
+    hist_conds = []
+    for symbol in symbol_hist:
+        count = symbol_hist[symbol]
+        v1_i0 = get_mat_id(v, symbol, 0)
+        hist_conds.append(v1_i0 == count)
+    return And(hist_conds)
+
+def cost(symbols: list, m: str, v: str):
+    vars = []
+    for row_symbol in symbols:
+        for col_symbol in symbols:
+            m_rc = get_mat_id(m, row_symbol, col_symbol)
+            vars.append(m_rc)
+    for symbol in symbols:
+        v_r0 = get_mat_id(v, symbol, 0)
+        vars.append(v_r0)
+    return Sum(vars)
+
+def solve(goal: list):
+    symbols = list(set(goal))
     symbol_hist = Counter(goal)
 
     new_conds = []
 
-    for from_symbol in symbol_hist:
-        for to_symbol in symbol_hist:
-            cell_id = gen_mat_id(from_symbol, to_symbol)
+    # m1 = m0^2
+    mat_mult_cond = mat_mult(symbols, "m0", "m0", "m1")
+    new_conds.append(mat_mult_cond)
+
+    # v1 = m1 * v0
+    mat_vec_mult_cond = mat_vec_mult(symbols, "m1", "v0", "v1")
+    new_conds.append(mat_vec_mult_cond)
+
+    # v1 = histogram(symbols)
+    hist_cond = hist_eq(symbol_hist, "v1")
+    new_conds.append(hist_cond)
+
+    # 0 <= m0[r][c] <= hist[r]
+    for from_symbol in symbols:
+        for to_symbol in symbols:
+            cell_id = get_mat_id("m0", from_symbol, to_symbol)
             new_conds.append(cell_id >= 0)
             new_conds.append(cell_id <= symbol_hist[from_symbol])
+    
+    # 0 <= v0[r] <= hist[r]
+    for symbol in symbols:
+        cell_id = get_mat_id("v0", symbol, 0)
+        new_conds.append(cell_id >= 0)
+        new_conds.append(cell_id <= symbol_hist[symbol])
 
-    return None
+    # cost = sum_rc(m0[r][c]) + sum_r(v[r])
+    cost_expr = cost(symbols, "m0", "v0")
+    # new_conds.append(cost_expr < 4)
 
+    solver = Optimize()
+    solver.add(new_conds)
+    solver.minimize(cost_expr)
 
-# Here's an example of the kind of `(schedule, array)` pair you should
-# return. This one exhibits a serializablility counterexample for the
-# lost-update-x.par examples.
-def example_lost_update_schedule():
-    schedule = [(Schedule.PROG1, 0),
-                (Schedule.PROG2, 0),
-                (Schedule.PROG1, 1),
-                (Schedule.PROG2, 1)]
-    # You can use a normal python list here, but defaultlist may
-    # more closely correspond to the model you get from Z3.
-    # https://defaultlist.readthedocs.io/en/1.0.0/
-    array = defaultlist(lambda: 0)
-    return (schedule, array)
-
-# You may freely modify this suite to include your own tests. (The
-# grading script will ignore this method and provide its own test
-# suite.)
-def test_suite():
-    # Each tuple represents a test: (prog1, prog2, expected result)
-    return [
-        ('examples/lost-update-1.par', 'examples/lost-update-2.par', Expected.CEX),
-        ('examples/nonrep-read-1.par', 'examples/nonrep-read-2.par', Expected.CEX),
-        ('examples/serializable-1.par', 'examples/serializable-2.par', Expected.NO_CEX),
-    ]
-
-
-# --------------------------------------------------------------------
-# Below this line is setup that you shouldn't need to touch.
-
-class Expected(Enum):
-    NO_CEX = 1
-    CEX = 2
-
-class ParTestCase(unittest.TestCase):
-    def __init__(self, prog1, prog2, expected):
-        super().__init__('test_serializability_cex')
-        self._testMethodDoc = '(' + prog1 + ', ' + prog2 + ')'
-        self.prog1 = prog1
-        self.prog2 = prog2
-        self.expected = expected
-
-    def test_serializability_cex(self):
-        prog1 = parse_parlang(self.prog1)
-        prog2 = parse_parlang(self.prog2)
-        result = find_serializability_cex(prog1, prog2)
-        if result == None:
-            self.assertEqual(Expected.NO_CEX, self.expected)
-        else:
-            self.assertEqual(Expected.CEX, self.expected)
-            (schedule, array) = result
-            validate_schedule(prog1, prog2, schedule)
-            (_, array_seq1) = eval_scheduled(prog1, prog2, array.copy())
-            (_, array_seq2) = eval_scheduled(prog2, prog1, array.copy())
-            (_, array_sched) = eval_scheduled(prog1, prog2, array.copy(), schedule)
-            self.assertNotEqual(array_seq1, array_sched,
-               "The scheduled and serial (prog1; prog2) executions gave the same result.")
-            self.assertNotEqual(array_seq2, array_sched,
-               "The scheduled and serial (prog2; prog1) executions gave the same result.")
+    if solver.check() == sat:
+        print("sat")
+        print(solver.model())
+    else:
+        print("not sat")
+    
+    return solver
 
 if __name__ == '__main__':
-    runner = unittest.TextTestRunner()
-    suite = unittest.TestSuite()
-    for (prog1, prog2, expected) in test_suite():
-        suite.addTest(ParTestCase(prog1, prog2, expected))
-    runner.run(suite)
+    solve([0, 1, 2, 1])
