@@ -102,7 +102,7 @@ def solve(goal: list, p: int):
     # vf = vi * m^p
     mat_vec_mult_cond = mat_vec_mult(symbols, "vi", m_p, "vf")
     new_conds.append(mat_vec_mult_cond)
-    print(mat_vec_mult_cond)
+    # print(mat_vec_mult_cond)
 
     # vf = histogram(symbols)
     hist_cond = hist_eq(symbol_hist, "vf")
@@ -121,7 +121,7 @@ def solve(goal: list, p: int):
         new_conds.append(cell_id >= 0)
         new_conds.append(cell_id <= symbol_hist[symbol])
 
-    # 1 <= sum_c(m^1[r][c]) <= hist[r]
+    # 1 <= sum_r(m^1[r][c]) <= hist[r]. from_symbol has to map to >=1 output. 
     for from_symbol in symbols:
         terms = []
         for to_symbol in symbols:
@@ -130,6 +130,16 @@ def solve(goal: list, p: int):
         to_sum = Sum(terms)
         new_conds.append(to_sum >= 1)
         new_conds.append(to_sum <= symbol_hist[from_symbol])
+
+    # 1 <= sum_c(m^1[r][c]) <= hist[c]. each symbol needs to be mapped to >=1.
+    # for to_symbol in symbols:
+    #     terms = []
+    #     for from_symbol in symbols:
+    #         cell_id = get_mat_id("m^1", from_symbol, to_symbol)
+    #         terms.append(cell_id)
+    #     to_sum = Sum(terms)
+    #     new_conds.append(to_sum >= 1)
+    #     new_conds.append(to_sum <= symbol_hist[to_symbol])
 
     # cost = sum_rc(m^1[r][c]) + sum_r(v[r])
     cost_expr = cost(symbols, "m^1", "vi")
@@ -142,26 +152,69 @@ def solve(goal: list, p: int):
         print("sat")
 
         model = solver.model()
-        print(model)
+        # print(model)
         
         rule_hists = dict()
         for from_symbol in symbols:
             hist = dict()
             for to_symbol in symbols:
                 m1_rc = get_mat_id("m^1", from_symbol, to_symbol)
-                hist[to_symbol] = model[m1_rc]
+                hist[to_symbol] = model[m1_rc].as_long()
             rule_hists[from_symbol] = hist
-        print(rule_hists)
 
         axiom_hist = dict()
         for symbol in symbols:
             v_rc = get_mat_id("vi", 0, symbol)
-            axiom_hist[symbol] = model[v_rc]
-        print(axiom_hist)
+            axiom_hist[symbol] = model[v_rc].as_long()
+
+        return rule_hists, axiom_hist
     else:
         print("not sat")
+        return None, None
     
     return solver
 
 if __name__ == '__main__':
-    solve([0, 1, 2, 1], 2)
+    target = []
+    depth = 0
+
+    import csv
+    with open('../outData', 'r') as fd:
+        reader = csv.reader(fd)
+        for row in reader:
+            for idx, x in enumerate(row):
+                if idx == 0:
+                    depth = int(x)
+                else:
+                    target.append(int(x))
+
+    rule_hists, axiom_hist = solve(target, depth)
+
+    result = []
+    if rule_hists:
+        axiom_line = [-1]
+        for to_symbol in axiom_hist:
+            axiom_line.append(to_symbol)
+            axiom_line.append(axiom_hist[to_symbol])
+        result.append(axiom_line)
+
+        for from_symbol in rule_hists:
+            line = []
+            line.append(from_symbol)
+            for to_symbol in rule_hists:
+                line.append(to_symbol)
+                line.append(rule_hists[from_symbol][to_symbol])
+            result.append(line)
+
+        result = [[len(result), len(result[0])]] + result
+    else:
+        result += [0,0]
+
+    print(result)
+    result = [item for sublist in result for item in sublist]
+
+    from array import array
+    dataArray = array('i', result)
+    outputFile = open('../outData', 'wb')
+    dataArray.tofile(outputFile)
+    outputFile.close()
