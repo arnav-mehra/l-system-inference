@@ -109,7 +109,7 @@ struct RuleGen {
         while (branches.size()) {
             if constexpr (DEBUG) cout << "\ntrying next branch:\n";
             id = 0;
-            auto [succ, _] = iter(AXIOM_SYMBOL, 0, depth + 1);
+            auto [succ, _] = iter(AXIOM_SYMBOL, 0, depth + 1); // + 1 since axiom is a psuedo-symbol
             if (succ) {
                 return { true, rule_set() };
             }
