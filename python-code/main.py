@@ -132,14 +132,14 @@ def solve(goal: list, p: int):
         new_conds.append(to_sum <= symbol_hist[from_symbol])
 
     # 1 <= sum_c(m^1[r][c]) <= hist[c]. each symbol needs to be mapped to >=1.
-    # for to_symbol in symbols:
-    #     terms = []
-    #     for from_symbol in symbols:
-    #         cell_id = get_mat_id("m^1", from_symbol, to_symbol)
-    #         terms.append(cell_id)
-    #     to_sum = Sum(terms)
-    #     new_conds.append(to_sum >= 1)
-    #     new_conds.append(to_sum <= symbol_hist[to_symbol])
+    for to_symbol in symbols:
+        terms = []
+        for from_symbol in symbols:
+            cell_id = get_mat_id("m^1", from_symbol, to_symbol)
+            terms.append(cell_id)
+        from_sum = Sum(terms)
+        new_conds.append(from_sum >= 1)
+        new_conds.append(from_sum <= symbol_hist[to_symbol])
 
     # cost = sum_rc(m^1[r][c]) + sum_r(v[r])
     cost_expr = cost(symbols, "m^1", "vi")
@@ -167,7 +167,7 @@ def solve(goal: list, p: int):
             v_rc = get_mat_id("vi", 0, symbol)
             axiom_hist[symbol] = model[v_rc].as_long()
 
-        return rule_hists, axiom_hist
+        return axiom_hist, rule_hists
     else:
         print("not sat")
         return None, None
@@ -188,7 +188,9 @@ if __name__ == '__main__':
                 else:
                     target.append(int(x))
 
-    rule_hists, axiom_hist = solve(target, depth)
+    axiom_hist, rule_hists = solve(target, depth)
+    print(axiom_hist)
+    print(rule_hists)
 
     result = []
     if rule_hists:
@@ -210,7 +212,6 @@ if __name__ == '__main__':
     else:
         result += [0,0]
 
-    print(result)
     result = [item for sublist in result for item in sublist]
 
     from array import array

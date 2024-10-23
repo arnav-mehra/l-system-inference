@@ -109,7 +109,7 @@ struct RuleGen {
         while (branches.size()) {
             if constexpr (DEBUG) cout << "\ntrying next branch:\n";
             id = 0;
-            auto [succ, _] = iter(AXIOM_SYMBOL, 0, depth);
+            auto [succ, _] = iter(AXIOM_SYMBOL, 0, depth + 1);
             if (succ) {
                 return { true, rule_set() };
             }
@@ -142,8 +142,8 @@ pair<bool, Histograms> read_histograms(Symbols alphabet) {
     vector<int> data(dims[0] * dims[1]);
     dataFile.read((char*)&data[0], data.size() * 4);
 
-    for (int x : data) cout << x << ' ';
-    cout << '\n';
+    // for (int x : data) cout << x << ' ';
+    // cout << '\n';
 
     dataFile.close();
 
@@ -188,7 +188,7 @@ int main() {
 
     auto [succ1, hists] = read_histograms(alphabet);
     if (!succ1) {
-        cout << "no sat";
+        cout << "no sat histograms\n";
         return 0;
     }
 
@@ -202,5 +202,5 @@ int main() {
     RuleGen gen(alphabet, hists, target);
     auto [succ2, rule_set] = gen.run(depth);
     cout << string(rule_set);
-    cout << succ2 << '\n';
+    cout << (succ2 ? "sat" : "no sat rules") << '\n';
 }
