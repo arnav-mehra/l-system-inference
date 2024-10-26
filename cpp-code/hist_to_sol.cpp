@@ -168,39 +168,48 @@ pair<bool, Histograms> read_histograms(Symbols alphabet) {
 }
 
 int main() {
-    const Symbols alphabet = { '0', '1', '2' };
+    // const Symbols alphabet = { '0', '1', '2' };
+    // Symbols target = { '0', '2', '1', '1' }; 10132
+    Symbols alphabet = { '0', '1', '2', '3' };
+    string target_str = "0131013220";
+    Symbols target(target_str.begin(), target_str.end());
+    const int max_depth = 3;
 
-    const int depth = 2;
+    for (int depth = max_depth; depth >= 1; depth--) {
+        write_inputs(depth, target);
+        system("python -u ../python-code/main.py");
 
-    Symbols target = { '0', '2', '1', '1' };
-    // Symbols target = { '0', '1', '2', '1' };
+        auto [succ1, hists] = read_histograms(alphabet);
+        if (!succ1) {
+            cout << depth << ": no sat histograms\n";
+            continue;
+        }
 
-    // const Histograms hists = {
-    //     { AXIOM_SYMBOL, {{'0', 1}, {'1', 1}, {'2', 0}} },
-    //     { '0', {{'0', 0}, {'1', 1}, {'2', 0}} },
-    //     { '1', {{'0', 1}, {'1', 0}, {'2', 1}} },
-    //     { '2', {{'0', 0}, {'1', 1}, {'2', 0}} }
-    // };
+        RuleGen gen(alphabet, hists, target);
+        auto [succ2, rule_set] = gen.run(depth);
+        if (!succ2) {
+            cout << depth << ": no sat rules\n";
+            continue;
+        }
 
-    write_inputs(depth, target);
-
-    system("python -u ../python-code/main.py");
-
-    auto [succ1, hists] = read_histograms(alphabet);
-    if (!succ1) {
-        cout << "no sat histograms\n";
-        return 0;
+        cout << depth << ": sat\n";
+        cout << string(rule_set);
+        break;
     }
-
-    // for (auto [ from_symbol, hist ] : hists) {
-    //     cout << from_symbol << ":\n";
-    //     for (auto [ to_symbol, cnt ] : hist) {
-    //         cout << to_symbol << ' ' << cnt << "\n";
-    //     }
-    // }
-
-    RuleGen gen(alphabet, hists, target);
-    auto [succ2, rule_set] = gen.run(depth);
-    cout << string(rule_set);
-    cout << (succ2 ? "sat" : "no sat rules") << '\n';
 }
+
+// Symbols target = { '0', '1', '2', '1' };
+
+// const Histograms hists = {
+//     { AXIOM_SYMBOL, {{'0', 1}, {'1', 1}, {'2', 0}} },
+//     { '0', {{'0', 0}, {'1', 1}, {'2', 0}} },
+//     { '1', {{'0', 1}, {'1', 0}, {'2', 1}} },
+//     { '2', {{'0', 0}, {'1', 1}, {'2', 0}} }
+// };
+
+// for (auto [ from_symbol, hist ] : hists) {
+//     cout << from_symbol << ":\n";
+//     for (auto [ to_symbol, cnt ] : hist) {
+//         cout << to_symbol << ' ' << cnt << "\n";
+//     }
+// }

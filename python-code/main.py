@@ -149,8 +149,6 @@ def solve(goal: list, p: int):
     solver.minimize(cost_expr)
 
     if solver.check() == sat:
-        print("sat")
-
         model = solver.model()
         # print(model)
         
@@ -169,7 +167,6 @@ def solve(goal: list, p: int):
 
         return axiom_hist, rule_hists
     else:
-        print("not sat")
         return None, None
     
     return solver
@@ -189,6 +186,7 @@ if __name__ == '__main__':
                     target.append(int(x))
 
     axiom_hist, rule_hists = solve(target, depth)
+    # print(target, depth)
     print(axiom_hist)
     print(rule_hists)
 
