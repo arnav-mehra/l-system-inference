@@ -168,8 +168,6 @@ def solve(goal: list, p: int):
         return axiom_hist, rule_hists
     else:
         return None, None
-    
-    return solver
 
 if __name__ == '__main__':
     target = []
@@ -186,13 +184,13 @@ if __name__ == '__main__':
                     target.append(int(x))
 
     axiom_hist, rule_hists = solve(target, depth)
-    # print(target, depth)
-    print(axiom_hist)
-    print(rule_hists)
+    print(target, depth)
+    # print(axiom_hist)
+    # print(rule_hists)
 
     result = []
     if rule_hists:
-        axiom_line = [-1]
+        axiom_line = [0]
         for to_symbol in axiom_hist:
             axiom_line.append(to_symbol)
             axiom_line.append(axiom_hist[to_symbol])
@@ -210,10 +208,15 @@ if __name__ == '__main__':
     else:
         result += [0,0]
 
+    print(result)
     result = [item for sublist in result for item in sublist]
+    print(result)
 
-    from array import array
-    dataArray = array('i', result)
-    outputFile = open('../outData', 'wb')
-    dataArray.tofile(outputFile)
-    outputFile.close()
+    try:
+        from array import array
+        dataArray = array('i', result)
+        outputFile = open('../outData', 'wb')
+        dataArray.tofile(outputFile)
+        outputFile.close()
+    except:
+        print("shit\n")

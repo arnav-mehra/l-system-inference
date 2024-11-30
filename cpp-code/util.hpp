@@ -1,26 +1,86 @@
+#pragma once
+
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>
 #include <algorithm>
 #include <iostream>
+
 using namespace std;
 
-typedef char Symbol;
-typedef vector<Symbol> Symbols;
+typedef int Symbol;
 
-typedef unordered_map<Symbol, int> Histogram;
-typedef unordered_map<Symbol, Histogram> Histograms;
+const auto AXIOM_SYMBOL = Symbol(0);
 
-constexpr Symbol AXIOM_SYMBOL = Symbol('*');
+struct Histogram : vector<int> {
+    Histogram(int alphabet_size) {
+        this->resize(alphabet_size + 1, 0);
+    }
 
-struct RuleSet {
-    unordered_map<Symbol, Symbols> map;
+    operator string() const {
+        string s = "{ ";
+        for (Symbol symbol = AXIOM_SYMBOL; symbol < size(); symbol++) {
+            s += to_string(symbol) + ": " + to_string((*this)[symbol]);
+            if (symbol != size() - 1) s += ", ";
+        }
+        return s + " }";
+    }
+};
+
+struct Histograms : vector<Histogram> {
+    Histograms(int alphabet_size) {
+        this->resize(alphabet_size + 1, Histogram(alphabet_size));
+    }
+
+    operator string() const {
+        string s = "[\n";
+        for (Symbol symbol = AXIOM_SYMBOL; symbol < size(); symbol++) {
+            s += "\t" + to_string(symbol) + ": " + string((*this)[symbol]);
+            if (symbol != size() - 1) s += ",\n";
+        }
+        return s + "]";
+    }
+};
+
+struct Symbols : vector<Symbol> {
+    Symbols() {}
+    Symbols(vector<Symbol> symbols) : vector<Symbol>(symbols) {}
+
+    Histogram hist(int alphabet_size) {
+        Histogram hist(alphabet_size);
+        for (Symbol symbol : *this) {
+            hist[symbol]++;
+        }
+        return hist;
+    }
+
+    operator string() const {
+        string s = "[";
+        for (int i = 0; i < size(); i++) {
+            s += to_string((*this)[i]) + (i == size() - 1 ? "" : ", "); 
+        }
+        return s + "]";
+    }
+};
+
+struct RuleSet : vector<Symbols> {
+    RuleSet() {}
+
+    RuleSet(int alphabet_size) {
+        this->resize(alphabet_size + 1, {}); // +1 for axiom = [0]
+    }
+
+    RuleSet pushed(Symbol from_symbol, Symbol to_symbol) {
+        RuleSet copy = *this;
+        copy[from_symbol].push_back(to_symbol);
+        return copy;
+    }
 
     Symbols apply_to(Symbols curr) {
         Symbols new_symbols;
 
         for (Symbol from_symbol : curr) {
-            for (Symbol to_symbol : map[from_symbol]) {
+            for (Symbol to_symbol : (*this)[from_symbol]) {
                 new_symbols.push_back(to_symbol);
             }
         }
@@ -28,45 +88,62 @@ struct RuleSet {
         return new_symbols;
     }
 
-    bool produces(Symbols& goal) {
-        Symbols curr = { Symbol(AXIOM_SYMBOL) };
+    pair<bool, int> produced_iter(Symbols& goal, int depth, Symbol symbol, int idx) {
+        // cout << depth << ' ' << symbol << ' ' << idx << '\n';
+        if (idx >= goal.size()) return { false, idx + 1 };
 
-        while (curr.size() <= goal.size()) {
-            int prev_len = curr.size();
-            curr = apply_to(curr);
-
-            // stuck at length.
-            if (prev_len == curr.size()) {
-                unordered_set<string> seen;
-                while (prev_len == curr.size()) {
-                    if (curr == goal) return true;
-
-                    string new_str = string(curr.begin(), curr.end());
-                    if (seen.count(new_str)) return false;
-                    seen.insert(new_str);
-
-                    curr = apply_to(curr);
-                }
-            }
+        if (depth == 0) {
+            // cout << goal[idx] << ' ' << symbol << '\n';
+            return { goal[idx] == symbol, idx + 1 };
         }
 
-        return false;
+        for (Symbol to_symbol : (*this)[symbol]) {
+            auto [ succ, new_idx ] = produced_iter(goal, depth - 1, to_symbol, idx);
+            idx = new_idx;
+
+            if (!succ) return { false, idx };
+        }
+
+        return { true, idx };
     }
 
-    operator std::string() const {
+    bool produces(Symbols& target, int depth) {
+        auto [ succ, idx ] = produced_iter(target, depth + 1, AXIOM_SYMBOL, 0);
+        return succ && idx == target.size();
+    }
+
+    operator string() const {
         string s = "[\n";
-        for (auto [ from_symbol, to_symbols ] : map) {
-            s += "\t";
-            s += from_symbol;
-            s += " -> [";
-            for (Symbol& to_symbol : to_symbols) {
-                s += to_symbol;
-                if (&to_symbol != &to_symbols.back()) s += ", ";
-            }
-            s += "]\n";
+        for (Symbol from_symbol = 0; from_symbol < size(); from_symbol++) {
+            auto to_symbols = (*this)[from_symbol];
+            s += "\t" + to_string(from_symbol) + " -> " + string(to_symbols) + "\n";
         }
         s += "]\n";
-
         return s;
     }
 };
+
+enum SolverStatus {
+    UNSAT_NO_HIST,
+    UNSAT_NO_RULESET,
+    UNSAT_TIMEOUT,
+    SAT
+};
+
+void printSolverResult(SolverStatus status, RuleSet rule_set) {
+    switch (status) {
+        case SolverStatus::UNSAT_NO_HIST: {
+            cout << "no sat histograms.\n";
+            break;
+        }
+        case SolverStatus::UNSAT_NO_RULESET: {
+            cout << "no sat ruleset.\n";
+            break;
+        }
+        case SolverStatus::SAT: {
+            cout << "sat: ";
+            cout << string(rule_set);
+            break;
+        }
+    }
+}
