@@ -18,7 +18,11 @@ void promisedSolver(
     result_promise.set_value(res);
 }
 
-typedef typeof(promisedSolver<BF::solver>) PromisedSolver;
+
+typedef void (*PromisedSolver)(
+    int alphabet_size, int depth, std::vector<Symbol> target,
+    std::promise<SolverResult> &&result_promise);
+
 
 vector<PromisedSolver> promised_solvers = {
     promisedSolver<BF::solver>,
