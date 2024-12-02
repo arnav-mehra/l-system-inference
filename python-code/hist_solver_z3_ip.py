@@ -184,7 +184,7 @@ if __name__ == '__main__':
                     target.append(int(x))
 
     axiom_hist, rule_hists = solve(target, depth)
-    print(target, depth)
+    # print(target, depth)
     # print(axiom_hist)
     # print(rule_hists)
 
@@ -208,9 +208,9 @@ if __name__ == '__main__':
     else:
         result += [0,0]
 
-    print(result)
+    # print(result)
     result = [item for sublist in result for item in sublist]
-    print(result)
+    # print(result)
 
     try:
         from array import array
@@ -219,4 +219,4 @@ if __name__ == '__main__':
         dataArray.tofile(outputFile)
         outputFile.close()
     except:
-        print("shit\n")
+        print("shit: failed to write to file buffer, outData\n")

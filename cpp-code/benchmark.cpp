@@ -6,60 +6,46 @@
 #include <thread>
 #include <future>
 
-typedef typeof(BF::solver) Solver;
+constexpr auto TIMEOUT = chrono::seconds(5);
+
 typedef pair<SolverStatus, RuleSet> SolverResult;
+typedef SolverResult (*Solver)(int alphabet_size, int depth, std::vector<Symbol> target);
 
-template<Solver solver>
-void promisedSolver(
-    int alphabet_size, int depth, vector<Symbol> target,
-    promise<SolverResult>&& result_promise
-) {
-    auto res = solver(alphabet_size, depth, target);
-    result_promise.set_value(res);
-}
-
-
-typedef void (*PromisedSolver)(
-    int alphabet_size, int depth, std::vector<Symbol> target,
-    std::promise<SolverResult> &&result_promise);
-
-
-vector<PromisedSolver> promised_solvers = {
-    promisedSolver<BF::solver>,
-    promisedSolver<HM::solver<HM::hist_solver_z3_ip, HM::ruleset_solver_matching>>
+vector<Solver> solvers = {
+    // BF::solver,
+    HM::solver<HM::hist_solver_z3_ip, HM::ruleset_solver_matching>
 };
 
-SolverResult test_solver(PromisedSolver promised_solver, Data data) {
-    promise<SolverResult> result_promise;
-    future<SolverResult> result_future = result_promise.get_future();
-    thread workerThread(
-        promised_solver,
-        data.alphabet_size, data.depth, data.target,
-        move(result_promise)
-    );
+SolverResult test_solver(Solver solver, Data data) {
+    future<SolverResult> result_future = async(launch::async, solver, data.alphabet_size, data.depth, data.target);
+    future_status future_status = result_future.wait_for(TIMEOUT);
 
-    future_status status = result_future.wait_for(chrono::seconds(10));
-    if (status != future_status::ready) {
+    if (future_status != future_status::ready) {
+        terminate();
         return { SolverStatus::UNSAT_TIMEOUT, RuleSet() };
     }
     return result_future.get();
 }
 
 vector<pair<Data, vector<SolverResult>>> test(DataGen data_gen, int samples) {
-    int right = 0;
-    int wrong = 0;
-    int time_out = 0;
-
     vector<pair<Data, vector<SolverResult>>> result_table;
 
     for (int i = 0; i < samples; i++) {
         auto [ iter, data ] = data_gen.gen();
+        cout << "sample generated...\n";
 
         vector<SolverResult> results;
-        // for (auto promised_solver : promised_solvers) {
-        //     auto res = test_solver(promised_solver, data);
-        //     results.push_back(res);
-        // }
+
+        cout << "results: ";
+        cout.flush();
+        for (auto solver : solvers) {
+            auto result = test_solver(solver, data);
+            results.push_back(result);
+
+            cout << result.first << " ";
+            cout.flush();
+        }
+        cout << "\n";
 
         result_table.push_back({ data, results });
     }
@@ -68,13 +54,15 @@ vector<pair<Data, vector<SolverResult>>> test(DataGen data_gen, int samples) {
 }
 
 int main() {
+    srand(time(0) * 17);
+
     auto depth_range = Range(3, 3);
     auto alphabet_range = Range(3, 3);
-    auto complexity_range = Range(2, 2);
+    auto complexity_range = Range(1, 2);
 
     auto data_gen = DataGen(depth_range, alphabet_range, complexity_range);
 
-    auto table = test(data_gen, 10);
+    auto table = test(data_gen, 2);
 
     for (auto record : table) {
         cout << string(record.first) << "\n";
