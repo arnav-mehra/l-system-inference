@@ -184,8 +184,8 @@ if __name__ == '__main__':
                 else:
                     target_hist.append(int(x))
 
-    axiom_hist, rule_hists = solve(target_hist, depth)
     print(target_hist, depth)
+    axiom_hist, rule_hists = solve(target_hist, depth)
     print(axiom_hist)
     print(rule_hists)
 

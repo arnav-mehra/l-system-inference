@@ -52,6 +52,8 @@ function pow(M, p)
 end
 
 (target_hist, D) = read_inputs()
+println(target_hist, D)
+
 N = length(target_hist)
 L = sum(target_hist)
 T = reshape(target_hist, 1, N)

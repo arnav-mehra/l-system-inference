@@ -128,12 +128,15 @@ struct RuleGen {
 const char* IN_BUFFER_FILE = "../inData";
 const char* OUT_BUFFER_FILE = "../outData";
 
-void write_inputs(int depth, Symbols target) {
+void write_inputs(int alphabet_size, int depth, Symbols target) {
     ofstream dataFile;
     dataFile.open(IN_BUFFER_FILE, std::ios::binary | std::ios::in | std::ios::trunc);
 
+    Histogram h(alphabet_size);
+    h.digest(target);
+
     string str = to_string(depth);
-    for (Symbol symbol : target) {
+    for (Symbol symbol : h) {
         str += "," + to_string(symbol);
     }
 
@@ -180,7 +183,7 @@ pair<bool, Histograms> hist_solver_z3(
     int depth,
     vector<Symbol> target
 ) {
-    write_inputs(depth, target);
+    write_inputs(alphabet_size, depth, target);
     system("python -u ../python-code/hist_solver_z3.py");
     return read_histograms(alphabet_size);
 }
@@ -190,7 +193,7 @@ pair<bool, Histograms> hist_solver_jump(
     int depth,
     vector<Symbol> target
 ) {
-    write_inputs(depth, target);
+    write_inputs(alphabet_size, depth, target);
     system("julia ../julia-code/hist_solver_jump.jl");
     return read_histograms(alphabet_size);
 }

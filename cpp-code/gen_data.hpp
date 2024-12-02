@@ -40,7 +40,7 @@ struct Data {
         s += "\talphabet: 1-" + to_string(alphabet_size) + "\n";
         s += "\trule set: " + string(rule_set);
         s += "\tdepth: " + to_string(depth) + "\n";
-        s += "\ttarget: " + string(target) + "\n";
+        s += "\ttarget (" + to_string(target.size()) + "):" + string(target) + "\n";
         s += "}\n";
         return s;
     }
