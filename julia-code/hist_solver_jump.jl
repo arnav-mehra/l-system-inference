@@ -28,9 +28,15 @@ function read_inputs()
     return (target_hist, depth)
 end
 
-# function write_outputs()
+function write_outputs(status, x, A)
+    array = vcat(vec(x), vec(A))
+    pushfirst!(array, status)
+    array = round.(Int, array)
 
-# end
+    open("../outData", "w") do file
+        println(file, join(array, ","))
+    end
+end
 
 function pow(M, p)
     if p == 1
@@ -50,8 +56,8 @@ N = length(target_hist)
 L = sum(target_hist)
 T = reshape(target_hist, 1, N)
 
-ipopt = optimizer_with_attributes(Ipopt.Optimizer, "print_level"=>0)
-optimizer = optimizer_with_attributes(Juniper.Optimizer, "nl_solver"=>ipopt)
+nl_solver = optimizer_with_attributes(Ipopt.Optimizer, "print_level"=>0)
+optimizer = optimizer_with_attributes(Juniper.Optimizer, "nl_solver"=>nl_solver, "print_level"=>0)
 model = Model(optimizer)
 
 @variable(model, A[1:N, 1:N] >= 0, Int)
@@ -75,9 +81,8 @@ end
 # print(model)
 optimize!(model)
 
-if !is_solved_and_feasible(model)
-    println("The model was not solved correctly.")
+if is_solved_and_feasible(model)
+    write_outputs(1, value.(x), value.(A))
 else
-    println(value.(A))
-    println(value.(x))
+    write_outputs(0, [], [])
 end

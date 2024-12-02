@@ -6,7 +6,7 @@ int main() {
     const int depth = 3;
 
     auto [status, rule_set] = HM::solver<
-        HM::hist_solver_z3_ip,
+        HM::hist_solver_z3,
         HM::ruleset_solver_matching
     >(alphabet_size, depth, target);
 

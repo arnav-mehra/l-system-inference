@@ -3,6 +3,7 @@
 #include "util.hpp"
 #include <queue>
 #include <fstream>
+#include <sstream>
 #include <string>
 
 #define DEBUG false
@@ -141,49 +142,62 @@ void write_inputs(int depth, Symbols target) {
 }
 
 pair<bool, Histograms> read_histograms(int alphabet_size) {
-    ifstream dataFile;
-    dataFile.open(OUT_BUFFER_FILE, std::ios::binary | std::ios::in);
+    ifstream file("../outData");
 
-    int dims[2];
-    dataFile.read((char*)&dims, sizeof(dims));
-
-    vector<int> data(dims[0] * dims[1]);
-    dataFile.read((char*)&data[0], data.size() * 4);
-
-    dataFile.close();
-
-    Histograms hists(alphabet_size);
-
-    for (int i = 0; i < dims[0] * dims[1]; i++) {
-        int r = i / dims[1];
-        int c = i % dims[1];
-        
-        if (c % 2 == 1) {
-            Symbol from_symbol = data[i - c];
-            Symbol to_symbol = data[i];
-            int cnt = data[i + 1];
-            hists[from_symbol][to_symbol] = cnt;
+    // read CSV into values.
+    vector<int> values;
+    string line, value;
+    while (getline(file, line)) {
+        stringstream ss(line);
+        while (getline(ss, value, ',')) {
+            values.push_back(stoi(value));
         }
     }
 
-    return { data.size() > 0, hists };
+    Histograms hists(alphabet_size);
+
+    // return false if status=failed(0).
+    int status = values[0];
+    if (status == 0) {
+        return { false, hists };
+    }
+    values.erase(values.begin());
+
+    for (int i = 0; i < alphabet_size * (alphabet_size + 1); i++) {
+        int from_symbol = i / alphabet_size;
+        int to_symbol = i % alphabet_size;
+        hists[from_symbol][to_symbol] = values[i];
+    }
+    return { true, hists };
 }
 
 // HIST SOLVERS
 
-pair<bool, Histograms> hist_solver_z3_ip(
+typedef pair<bool, Histograms> (*HistSolver)(int alphabet_size, int depth, vector<Symbol> target);
+
+pair<bool, Histograms> hist_solver_z3(
     int alphabet_size,
     int depth,
     vector<Symbol> target
 ) {
     write_inputs(depth, target);
-    system("python -u ../python-code/hist_solver_z3_ip.py");
+    system("python -u ../python-code/hist_solver_z3.py");
     return read_histograms(alphabet_size);
 }
 
-typedef typeof(hist_solver_z3_ip) HistSolver;
+pair<bool, Histograms> hist_solver_jump(
+    int alphabet_size,
+    int depth,
+    vector<Symbol> target
+) {
+    write_inputs(depth, target);
+    system("julia ../julia-code/hist_solver_jump.jl");
+    return read_histograms(alphabet_size);
+}
 
 // RULESET SOLVERS
+
+typedef pair<bool, RuleSet> (*RuleSetSolver)(int alphabet_size, int depth, Histograms hists, vector<Symbol> target);
 
 pair<bool, RuleSet> ruleset_solver_matching(
     int alphabet_size,
@@ -194,8 +208,6 @@ pair<bool, RuleSet> ruleset_solver_matching(
     RuleGen gen(alphabet_size, hists, target);
     return gen.run(depth);
 }
-
-typedef typeof(ruleset_solver_matching) RuleSetSolver;
 
 // MASTER SOLVER
 

@@ -6,14 +6,15 @@
 #include <thread>
 #include <future>
 
-constexpr auto TIMEOUT = chrono::seconds(5);
+constexpr auto TIMEOUT = chrono::seconds(100);
 
 typedef pair<SolverStatus, RuleSet> SolverResult;
 typedef SolverResult (*Solver)(int alphabet_size, int depth, std::vector<Symbol> target);
 
 vector<Solver> solvers = {
     // BF::solver,
-    HM::solver<HM::hist_solver_z3_ip, HM::ruleset_solver_matching>
+    HM::solver<HM::hist_solver_z3, HM::ruleset_solver_matching>,
+    HM::solver<HM::hist_solver_jump, HM::ruleset_solver_matching>
 };
 
 SolverResult test_solver(Solver solver, Data data) {

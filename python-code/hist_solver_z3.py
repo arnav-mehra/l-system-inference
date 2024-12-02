@@ -151,18 +151,20 @@ def solve(target_hist: list, p: int):
         model = solver.model()
         # print(model)
         
-        rule_hists = dict()
+        rule_hists = []
         for from_symbol in symbols:
-            hist = dict()
+            hist = []
             for to_symbol in symbols:
                 m1_rc = get_mat_id("m^1", from_symbol, to_symbol)
-                hist[to_symbol] = model[m1_rc].as_long()
-            rule_hists[from_symbol] = hist
+                cnt = model[m1_rc].as_long()
+                hist.append(cnt)
+            rule_hists.append(hist)
 
-        axiom_hist = dict()
+        axiom_hist = []
         for symbol in symbols:
             v_rc = get_mat_id("vi", 0, symbol)
-            axiom_hist[symbol] = model[v_rc].as_long()
+            cnt = model[v_rc].as_long()
+            axiom_hist.append(cnt)
 
         return axiom_hist, rule_hists
     else:
@@ -189,33 +191,16 @@ if __name__ == '__main__':
 
     result = []
     if rule_hists:
-        axiom_line = [0]
-        for to_symbol in axiom_hist:
-            axiom_line.append(to_symbol)
-            axiom_line.append(axiom_hist[to_symbol])
-        result.append(axiom_line)
-
-        for from_symbol in rule_hists:
-            line = []
-            line.append(from_symbol)
-            for to_symbol in rule_hists:
-                line.append(to_symbol)
-                line.append(rule_hists[from_symbol][to_symbol])
-            result.append(line)
-
-        result = [[len(result), len(result[0])]] + result
+        rule_hist_flat = [item for sublist in rule_hists for item in sublist]
+        result = [1] + axiom_hist + rule_hist_flat
     else:
-        result += [0,0]
-
-    # print(result)
-    result = [item for sublist in result for item in sublist]
-    # print(result)
+        result = [0]
+    result_string = ",".join([str(x) for x in result])
+    # print(result_string)
 
     try:
-        from array import array
-        dataArray = array('i', result)
-        outputFile = open('../outData', 'wb')
-        dataArray.tofile(outputFile)
+        outputFile = open('../outData', 'w')
+        outputFile.write(result_string)
         outputFile.close()
     except:
         print("shit: failed to write to file buffer, outData\n")
