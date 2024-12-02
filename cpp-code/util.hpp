@@ -17,6 +17,12 @@ struct Histogram : vector<int> {
         this->resize(alphabet_size + 1, 0);
     }
 
+    void digest(vector<Symbol> symbols) {
+        for (Symbol symbol : symbols) {
+            this->at(symbol)++;
+        }
+    }
+
     operator string() const {
         string s = "{ ";
         for (Symbol symbol = AXIOM_SYMBOL; symbol < size(); symbol++) {

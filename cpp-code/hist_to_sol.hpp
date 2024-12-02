@@ -124,11 +124,12 @@ struct RuleGen {
     }
 };
 
-const char* BUFFER_FILE = "../outData";
+const char* IN_BUFFER_FILE = "../inData";
+const char* OUT_BUFFER_FILE = "../outData";
 
 void write_inputs(int depth, Symbols target) {
     ofstream dataFile;
-    dataFile.open(BUFFER_FILE, std::ios::binary | std::ios::in | std::ios::trunc);
+    dataFile.open(IN_BUFFER_FILE, std::ios::binary | std::ios::in | std::ios::trunc);
 
     string str = to_string(depth);
     for (Symbol symbol : target) {
@@ -141,7 +142,7 @@ void write_inputs(int depth, Symbols target) {
 
 pair<bool, Histograms> read_histograms(int alphabet_size) {
     ifstream dataFile;
-    dataFile.open(BUFFER_FILE, std::ios::binary | std::ios::in);
+    dataFile.open(OUT_BUFFER_FILE, std::ios::binary | std::ios::in);
 
     int dims[2];
     dataFile.read((char*)&dims, sizeof(dims));

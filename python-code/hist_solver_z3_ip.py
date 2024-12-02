@@ -42,10 +42,10 @@ def vec_eq(symbols: list, v1: str, v2: str):
         conds.append(v1_i == v2_i)
     return And(conds)
 
-def hist_eq(symbol_hist: Counter, v: str):
+def hist_eq(symbol_hist: list, v: str):
     hist_conds = []
-    for symbol in symbol_hist:
-        count = symbol_hist[symbol]
+    for symbol_idx, count in enumerate(symbol_hist):
+        symbol = symbol_idx + 1
         v_i = get_mat_id(v, 0, symbol)
         hist_conds.append(v_i == count)
     return And(hist_conds)
@@ -88,10 +88,9 @@ def mat_pow(symbols: list, m_prefix: str, p: int):
 
     return And(conds)
 
-def solve(goal: list, p: int):
-    symbols = list(set(goal))
-    symbol_hist = Counter(goal)
-
+def solve(target_hist: list, p: int):
+    symbols = range(1, len(target_hist) + 1)
+    target_len = sum(target_hist)
     new_conds = []
 
     # m^p
@@ -105,7 +104,7 @@ def solve(goal: list, p: int):
     # print(mat_vec_mult_cond)
 
     # vf = histogram(symbols)
-    hist_cond = hist_eq(symbol_hist, "vf")
+    hist_cond = hist_eq(target_hist, "vf")
     new_conds.append(hist_cond)
 
     # 0 <= m^1[r][c] <= hist[r]
@@ -113,13 +112,13 @@ def solve(goal: list, p: int):
         for to_symbol in symbols:
             cell_id = get_mat_id("m^1", from_symbol, to_symbol)
             new_conds.append(cell_id >= 0)
-            new_conds.append(cell_id <= symbol_hist[from_symbol])
+            # new_conds.append(cell_id <= symbol_hist[from_symbol])
 
     # 0 <= vi[r] <= hist[r]
     for symbol in symbols:
         cell_id = get_mat_id("vi", 0, symbol)
         new_conds.append(cell_id >= 0)
-        new_conds.append(cell_id <= symbol_hist[symbol])
+        # new_conds.append(cell_id <= symbol_hist[symbol])
 
     # 1 <= sum_r(m^1[r][c]) <= hist[r]. from_symbol has to map to >=1 output. 
     for from_symbol in symbols:
@@ -129,7 +128,7 @@ def solve(goal: list, p: int):
             terms.append(cell_id)
         to_sum = Sum(terms)
         new_conds.append(to_sum >= 1)
-        new_conds.append(to_sum <= symbol_hist[from_symbol])
+        # new_conds.append(to_sum <= symbol_hist[from_symbol])
 
     # 1 <= sum_c(m^1[r][c]) <= hist[c]. each symbol needs to be mapped to >=1.
     for to_symbol in symbols:
@@ -139,7 +138,7 @@ def solve(goal: list, p: int):
             terms.append(cell_id)
         from_sum = Sum(terms)
         new_conds.append(from_sum >= 1)
-        new_conds.append(from_sum <= symbol_hist[to_symbol])
+        # new_conds.append(from_sum <= symbol_hist[to_symbol])
 
     # cost = sum_rc(m^1[r][c]) + sum_r(v[r])
     cost_expr = cost(symbols, "m^1", "vi")
@@ -170,23 +169,23 @@ def solve(goal: list, p: int):
         return None, None
 
 if __name__ == '__main__':
-    target = []
+    target_hist = []
     depth = 0
 
     import csv
-    with open('../outData', 'r') as fd:
+    with open('../inData', 'r') as fd:
         reader = csv.reader(fd)
         for row in reader:
             for idx, x in enumerate(row):
                 if idx == 0:
                     depth = int(x)
                 else:
-                    target.append(int(x))
+                    target_hist.append(int(x))
 
-    axiom_hist, rule_hists = solve(target, depth)
-    # print(target, depth)
-    # print(axiom_hist)
-    # print(rule_hists)
+    axiom_hist, rule_hists = solve(target_hist, depth)
+    print(target_hist, depth)
+    print(axiom_hist)
+    print(rule_hists)
 
     result = []
     if rule_hists:
