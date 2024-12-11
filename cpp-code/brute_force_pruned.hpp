@@ -70,25 +70,3 @@ pair<SolverStatus, RuleSet> solver(
 }
 
 };
-
-// // prune prefix mismatches
-// Symbol str_first_symbol = AXIOM_SYMBOL;
-// for (int i = 1; i <= depth - 1; i++) {
-//     str_first_symbol = new_rule_set[str_first_symbol][0];
-// }
-// Symbols& final_rule_string = new_rule_set[str_first_symbol];
-// if (!final_rule_string.is_at(target, 0)) {
-//     return;
-// }
-
-// // prune symbol overuse
-// Symbols str; str.push_back(AXIOM_SYMBOL);
-// for (int i = 1; i <= depth; i++) {
-//     str = new_rule_set.apply_to(str);
-// }
-// Histogram str_hist(alphabet_size); str_hist.digest(str);
-// for (Symbol to_symbol = AXIOM_SYMBOL + 1; to_symbol <= alphabet_size; to_symbol++) {
-//     if (str_hist[to_symbol] > target_hist[to_symbol]) {
-//         return;
-//     }
-// }
