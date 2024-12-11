@@ -129,6 +129,23 @@ struct RuleSet : vector<Symbols> {
     }
 };
 
+struct RuleSetHash {
+    size_t operator()(const RuleSet& rule_set) const {
+        hash<int> hasher;
+        size_t seed = 0;
+        for (const Symbols& to_symbols : rule_set) {
+            // use size to encode separation between rule strings. 
+            seed ^= hasher(to_symbols.size()) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+            for (Symbol symbol : to_symbols) {
+                seed ^= hasher(symbol) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+            }
+        }
+        return seed;
+    }
+};
+
+typedef unordered_set<RuleSet, RuleSetHash> RuleSetHashSet;
+
 enum SolverStatus {
     UNSAT_NO_HIST,
     UNSAT_NO_RULESET,

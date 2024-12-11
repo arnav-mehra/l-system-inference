@@ -3,28 +3,31 @@
 #include "util.hpp"
 #include <array>
 
+#define DEBUG false
+
 namespace BF {
 
 struct RuleGen {
     int alphabet_size;
     Symbols target;
-    vector<vector<RuleSet>> results;
+
+    vector<RuleSet> results;
+    RuleSetHashSet seen;
+    int last_deviated_idx;
 
     RuleGen(int alphabet_size, Symbols target)
         : alphabet_size(alphabet_size), target(target) {}
 
     void gen_init() {
-        Histogram target_hist = target.hist(alphabet_size);
-
         vector<RuleSet> curr_rule_sets = { RuleSet(alphabet_size) };
 
+        // generate all rule sets of 1 to_symbol per from_symbol.
+        // formally: { i -> [x_i] | for all i in [0,|S|], x_i in [1,|S|] }
         for (Symbol from_symbol = AXIOM_SYMBOL; from_symbol <= alphabet_size; from_symbol++) {
             vector<RuleSet> new_rule_sets;
 
             for (RuleSet& old_rule_set : curr_rule_sets) {
                 for (Symbol to_symbol = AXIOM_SYMBOL + 1; to_symbol <= alphabet_size; to_symbol++) {
-                    if (target_hist[to_symbol] <= 0) continue;
-
                     RuleSet new_rule_set = old_rule_set;
                     new_rule_set[from_symbol].push_back(to_symbol);
                     new_rule_sets.push_back(new_rule_set);
@@ -34,22 +37,18 @@ struct RuleGen {
             curr_rule_sets = new_rule_sets;
         }
 
-        results = { curr_rule_sets };
+        results = curr_rule_sets;
+        last_deviated_idx = -1;
     }
 
     vector<RuleSet> gen_deviants(RuleSet& curr_rule_set) {
-        vector<RuleSet> sol;
+        vector<RuleSet> deviants;
 
-        Histogram target_hist = target.hist(alphabet_size);
-
-        for (int i = 0; i < alphabet_size; i++) {
-            Symbol from_symbol = Symbol(i);
+        for (Symbol from_symbol = AXIOM_SYMBOL; from_symbol <= alphabet_size; from_symbol++) {
             auto& to_symbols = curr_rule_set[from_symbol];
 
-            Histogram to_hist = to_symbols.hist(alphabet_size);
-
             for (Symbol added_symbol = AXIOM_SYMBOL + 1; added_symbol <= alphabet_size; added_symbol++) {
-                if (to_hist[added_symbol] >= target_hist[added_symbol]) continue;
+                if (to_symbols.size() > target.size()) continue; // don't generate deviants with rule strings longer than the target.
 
                 RuleSet new_rule_set = curr_rule_set;
                 
@@ -57,50 +56,56 @@ struct RuleGen {
                 new_to_symbols.push_back(added_symbol);
                 new_rule_set[from_symbol] = new_to_symbols;
 
-                sol.push_back(new_rule_set);
+                deviants.push_back(new_rule_set);
             }
         }
 
-        return sol;
+        if constexpr (DEBUG) {
+            // cout << "original:\n";
+            // cout << string(curr_rule_set) << '\n';
+            // cout << "deviants:\n";
+            // for (RuleSet rs : deviants) {
+            //     cout << string(rs) << '\n';
+            // }
+        }
+
+        return deviants;
     }
 
     void gen_next_level() {
-        vector<RuleSet> new_rule_sets;
-
-        for (RuleSet& curr_rule_set : results.back()) {
-            for (RuleSet new_rule_set : gen_deviants(curr_rule_set)) {
-                bool is_unique = true;
-
-                for (RuleSet& rs : new_rule_sets) {
-                    is_unique &= rs != new_rule_set;
-                }
-
-                if (is_unique) {
-                    new_rule_sets.push_back(new_rule_set);
-                }
-            }
+        if (results.size() == 0) {
+            gen_init();
+            return;
         }
 
-        results.push_back(new_rule_sets);
+        // deviate from next undeviated rule set, only adding unique rule sets.
+        RuleSet& base_rule_set = results[++last_deviated_idx];
+        for (RuleSet& new_rule_set : gen_deviants(base_rule_set)) {
+            if (seen.find(new_rule_set) == seen.end()) {
+                results.push_back(new_rule_set);
+                seen.insert(new_rule_set);
+            }
+        }
+    }
+
+    bool can_deviate() { // check if there is a rule set to deviate from.
+        return results.size() == 0
+            || last_deviated_idx + 1 < results.size();
     }
 
     pair<bool, RuleSet> find(int depth) {
-        if (results.size() == 0) {
-            gen_init();
-        }
-
-        for (vector<RuleSet> rule_sets : results) {
-            for (RuleSet rule_set : rule_sets) {
-                if (rule_set.produces(target, depth)) {
-                    return { true, rule_set };
-                }
-            }
-        }
-
-        while (results.back().size()) {
+        while (can_deviate()) { // loop until there are no rule sets to deviate from.
+            int prior_len = results.size();
             gen_next_level();
+            int new_len = results.size();
 
-            for (RuleSet new_rule_set : results.back()) {
+            if constexpr (DEBUG) {
+                // cout << "iter: " << prior_len << ' ' << new_len << '\n';
+                // cout << (new_len - prior_len) << ' ';
+            }
+
+            for (int i = prior_len; i < new_len; i++) {
+                auto& new_rule_set = results[i];
                 if (new_rule_set.produces(target, depth)) {
                     return { true, new_rule_set };
                 }
@@ -108,16 +113,6 @@ struct RuleGen {
         }
 
         return { false, RuleSet(alphabet_size) };
-    }
-
-    vector<RuleSet> collect_results() {
-        vector<RuleSet> sol;
-        for (auto& rule_sets : results) {
-            for (auto& rule_set : rule_sets) {
-                sol.push_back(rule_set);
-            }
-        }
-        return sol;
     }
 };
 
@@ -133,7 +128,10 @@ pair<SolverStatus, RuleSet> solver(
         return { SolverStatus::UNSAT_NO_RULESET, RuleSet() };
     }
 
-    return { SolverStatus::SAT, RuleSet() };
+    if (DEBUG) {
+        cout << "grammars checked: " << gen.results.size() << "\n";
+    }
+    return { SolverStatus::SAT, rule_set };
 }
 
 };
