@@ -8,9 +8,9 @@ int main() {
     auto [status, rule_set] = HM::solver<
         HM::hist_solver_z3,
         HM::ruleset_solver_matching
-    >(alphabet_size, depth, target);
+    >(alphabet_size, depth, target, 30);
 
-    printSolverResult(status, rule_set);
+    print_solver_result(status, rule_set);
 }
 
 // Symbols target = { '0', '1', '2', '1' };

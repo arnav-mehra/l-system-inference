@@ -5,6 +5,7 @@
 #include <unordered_set>
 #include <algorithm>
 #include <iostream>
+#include <chrono>
 
 using namespace std;
 
@@ -63,7 +64,7 @@ struct Symbols : vector<Symbol> {
     operator string() const {
         string s = "[";
         for (int i = 0; i < size(); i++) {
-            s += to_string((*this)[i]) + (i == size() - 1 ? "" : ", "); 
+            s += to_string((*this)[i]) + (i == size() - 1 ? "" : " "); 
         }
         return s + "]";
     }
@@ -118,13 +119,23 @@ struct RuleSet : vector<Symbols> {
         return succ && idx == target.size();
     }
 
-    operator string() const {
-        string s = "[\n";
-        for (Symbol from_symbol = 0; from_symbol < size(); from_symbol++) {
+    int get_complexity() {
+        int c = 0;
+        for (Symbol from_symbol = AXIOM_SYMBOL; from_symbol < size(); from_symbol++) {
             auto to_symbols = (*this)[from_symbol];
-            s += "\t" + to_string(from_symbol) + " -> " + string(to_symbols) + "\n";
+            c += to_symbols.size() - 1;
         }
-        s += "]\n";
+        return c;
+    }
+
+    operator string() const {
+        string s = "[";
+        for (Symbol from_symbol = AXIOM_SYMBOL; from_symbol < size(); from_symbol++) {
+            auto to_symbols = (*this)[from_symbol];
+            s += to_string(from_symbol) + " -> " + string(to_symbols) + ";";
+            s += from_symbol == size() - 1 ? "" : " ";
+        }
+        s += "]";
         return s;
     }
 };
@@ -153,27 +164,26 @@ enum SolverStatus {
     SAT
 };
 
-void printSolverResult(SolverStatus status, RuleSet rule_set) {
+string solver_status_to_string(SolverStatus status) {
     switch (status) {
-        case SolverStatus::UNSAT_NO_HIST: {
-            cout << "no sat histograms.\n";
-            break;
-        }
-        case SolverStatus::UNSAT_NO_RULESET: {
-            cout << "no sat ruleset.\n";
-            break;
-        }
-        case SolverStatus::SAT: {
-            cout << "sat: ";
-            cout << string(rule_set);
-            break;
-        }
+        case SolverStatus::UNSAT_NO_HIST: return "UNSAT_NO_HIST";
+        case SolverStatus::UNSAT_NO_RULESET: return "UNSAT_NO_RULESET";
+        case SolverStatus::UNSAT_TIMEOUT: return "UNSAT_TIMEOUT";
+        case SolverStatus::SAT: return "SAT";
+    }
+    return "INVALID_STATUS";
+}
+
+void print_solver_result(SolverStatus status, RuleSet rule_set) {
+    cout << solver_status_to_string(status) << "\n";
+    if (status == SolverStatus::SAT) {
+        cout << string(rule_set);
     }
 }
 
 struct Timer {
     int timeout;
-    chrono::steady_clock::time_point start_time;
+    chrono::system_clock::time_point start_time;
 
     Timer(int timeout) : timeout(timeout) {}
 
@@ -184,8 +194,8 @@ struct Timer {
 
     bool timed_out() {
         auto curr_time = chrono::high_resolution_clock::now();
-        chrono::duration<float> s_double = curr_time - start_time;
-        auto time_elapsed = s_double.count();
+        chrono::duration<double> duration = curr_time - start_time;
+        double time_elapsed = duration.count();
         return time_elapsed >= timeout;
     }
 };

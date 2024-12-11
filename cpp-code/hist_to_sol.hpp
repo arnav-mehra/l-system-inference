@@ -224,14 +224,14 @@ pair<SolverStatus, RuleSet> solver(
     vector<Symbol> target,
     int timeout
 ) {
-    auto [succ1, hists] = hist_solver(alphabet_size, depth, target);
+    auto [succ1, hists] = hist_solver(alphabet_size, depth, target, timeout);
     if (!succ1) {
-        return { SolverStatus::UNSAT_NO_HIST, RuleSet(alphabet_size) };
+        return { SolverStatus::UNSAT_NO_HIST, RuleSet() };
     }
 
     auto [succ2, rule_set] = ruleset_solver(alphabet_size, depth, hists, target);
     if (!succ2) {
-        return { SolverStatus::UNSAT_NO_RULESET, RuleSet(alphabet_size) };
+        return { SolverStatus::UNSAT_NO_RULESET, RuleSet() };
     }
 
     return { SolverStatus::SAT, rule_set };
