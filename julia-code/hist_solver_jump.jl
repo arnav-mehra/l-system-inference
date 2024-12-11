@@ -1,4 +1,4 @@
-import Pkg
+# import Pkg
 # Pkg.add("Ipopt")
 # Pkg.add("CSV")
 # Pkg.add("JuMP")
@@ -22,9 +22,8 @@ function read_inputs()
         end
     end
 
-    println(target_hist)
-    println(depth)
-
+    # println(target_hist)
+    # println(depth)
     return (target_hist, depth)
 end
 
@@ -52,33 +51,28 @@ function pow(M, p)
 end
 
 (target_hist, D) = read_inputs()
-println(target_hist, D)
+# println(target_hist, D)
 
 N = length(target_hist)
 L = sum(target_hist)
 T = reshape(target_hist, 1, N)
 
 nl_solver = optimizer_with_attributes(Ipopt.Optimizer, "print_level"=>0)
-optimizer = optimizer_with_attributes(Juniper.Optimizer, "nl_solver"=>nl_solver, "print_level"=>0)
-model = Model(optimizer)
+optimizer = optimizer_with_attributes(Juniper.Optimizer, "nl_solver"=>nl_solver, "time_limit"=>30)
+model = Model(optimizer; add_bridges = false)
+set_string_names_on_creation(model, false)
 
 @variable(model, A[1:N, 1:N] >= 0, Int)
 @variable(model, x[1:1, 1:N] >= 0, Int)
 
 for i in 1:N
-    @constraint(model, sum(A[:,i]) >= 1)
-    # @constraint(model, sum(A[:,i]) <= L)
-    @constraint(model, sum(A[i,:]) >= 1)
-    # @constraint(model, sum(A[:,i]) <= target_hist[i])
+    @constraint(model, sum(A[:,i]) >= 1) # each rule must be used at least once.
+    @constraint(model, sum(A[i,:]) >= 1) # each rule string must be non-empty.
 end
 
 @constraint(model, x * pow(A, D) == T)
 @objective(model, Min, sum(x[1,:]) + sum(A[:,:]))
 # @objective(model, Min, (sum(x[1,:]) + sum(A[:,:]) - 6)^2)
-
-# @variable(model, d[1:1,1:N], Int)
-# @constraint(model, d == x * pow(A, D) - T)
-# @objective(model, Min, sum(i^2 for i in d[1,:]))
 
 # print(model)
 optimize!(model)

@@ -107,20 +107,18 @@ def solve(target_hist: list, p: int):
     hist_cond = hist_eq(target_hist, "vf")
     new_conds.append(hist_cond)
 
-    # 0 <= m^1[r][c] <= hist[r]
+    # m^1[r][c] >= 0
     for from_symbol in symbols:
         for to_symbol in symbols:
             cell_id = get_mat_id("m^1", from_symbol, to_symbol)
             new_conds.append(cell_id >= 0)
-            # new_conds.append(cell_id <= symbol_hist[from_symbol])
 
-    # 0 <= vi[r] <= hist[r]
+    # vi[r] >= 0
     for symbol in symbols:
         cell_id = get_mat_id("vi", 0, symbol)
         new_conds.append(cell_id >= 0)
-        # new_conds.append(cell_id <= symbol_hist[symbol])
 
-    # 1 <= sum_r(m^1[r][c]) <= hist[r]. from_symbol has to map to >=1 output. 
+    # sum(m^1[r][:]) >= 1. each symbol must map to a string of size >= 1. 
     for from_symbol in symbols:
         terms = []
         for to_symbol in symbols:
@@ -128,9 +126,8 @@ def solve(target_hist: list, p: int):
             terms.append(cell_id)
         to_sum = Sum(terms)
         new_conds.append(to_sum >= 1)
-        # new_conds.append(to_sum <= symbol_hist[from_symbol])
 
-    # 1 <= sum_c(m^1[r][c]) <= hist[c]. each symbol needs to be mapped to >=1.
+    # sum(m^1[:][c]) >= 1. each symbol needs to be mapped to >= 1.
     for to_symbol in symbols:
         terms = []
         for from_symbol in symbols:
@@ -138,7 +135,6 @@ def solve(target_hist: list, p: int):
             terms.append(cell_id)
         from_sum = Sum(terms)
         new_conds.append(from_sum >= 1)
-        # new_conds.append(from_sum <= symbol_hist[to_symbol])
 
     # cost = sum_rc(m^1[r][c]) + sum_r(v[r])
     cost_expr = cost(symbols, "m^1", "vi")
@@ -184,10 +180,10 @@ if __name__ == '__main__':
                 else:
                     target_hist.append(int(x))
 
-    print(target_hist, depth)
+    # print(target_hist, depth)
     axiom_hist, rule_hists = solve(target_hist, depth)
-    print(axiom_hist)
-    print(rule_hists)
+    # print(axiom_hist)
+    # print(rule_hists)
 
     result = []
     if rule_hists:
@@ -203,4 +199,4 @@ if __name__ == '__main__':
         outputFile.write(result_string)
         outputFile.close()
     except:
-        print("shit: failed to write to file buffer, outData\n")
+        print("Failed to write to file buffer, outData!\n")
