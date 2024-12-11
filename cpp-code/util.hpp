@@ -60,6 +60,16 @@ struct Symbols : vector<Symbol> {
         return hist;
     }
 
+    // bool is_at(Symbols& target, int offset) {
+    //     if (size() > target.size() - offset) return false;
+
+    //     bool matches = true;
+    //     for (int i = 0; i < size(); i++) {
+    //         matches &= at(i) == target[i + offset];
+    //     }
+    //     return matches;
+    // }
+
     operator string() const {
         string s = "[";
         for (int i = 0; i < size(); i++) {

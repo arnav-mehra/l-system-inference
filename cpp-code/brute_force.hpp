@@ -12,17 +12,20 @@ struct RuleGen {
     Symbols target;
 
     vector<RuleSet> results;
-    RuleSetHashSet seen;
     int last_deviated_idx;
 
     RuleGen(int alphabet_size, Symbols target)
         : alphabet_size(alphabet_size), target(target) {}
 
+    virtual void add_rule_set(RuleSet& rule_set) {
+        results.push_back(rule_set);
+    }
+
+    // generate all rule sets of 1 to_symbol per from_symbol.
+    // formally: { i -> [x_i] | for all i in [0,|S|], x_i in [1,|S|] }
     void gen_init() {
         vector<RuleSet> curr_rule_sets = { RuleSet(alphabet_size) };
 
-        // generate all rule sets of 1 to_symbol per from_symbol.
-        // formally: { i -> [x_i] | for all i in [0,|S|], x_i in [1,|S|] }
         for (Symbol from_symbol = AXIOM_SYMBOL; from_symbol <= alphabet_size; from_symbol++) {
             vector<RuleSet> new_rule_sets;
 
@@ -37,10 +40,14 @@ struct RuleGen {
             curr_rule_sets = new_rule_sets;
         }
 
-        results = curr_rule_sets;
+        for (RuleSet& rule_set : curr_rule_sets) {
+            add_rule_set(rule_set);
+        }
         last_deviated_idx = -1;
     }
 
+    // generate all deviants such that a symbol is appended any rule of curr_rule_set
+    // and no rule contains more than |target| symbols.
     vector<RuleSet> gen_deviants(RuleSet& curr_rule_set) {
         vector<RuleSet> deviants;
 
@@ -74,21 +81,20 @@ struct RuleGen {
 
     void gen_next_level() {
         if (results.size() == 0) {
+            // gen initial set of rule sets.
             gen_init();
-            return;
         }
-
-        // deviate from next undeviated rule set, only adding unique rule sets.
-        RuleSet& base_rule_set = results[++last_deviated_idx];
-        for (RuleSet& new_rule_set : gen_deviants(base_rule_set)) {
-            if (seen.find(new_rule_set) == seen.end()) {
-                results.push_back(new_rule_set);
-                seen.insert(new_rule_set);
+        else {
+            // deviate from next undeviated rule set.
+            RuleSet& base_rule_set = results[++last_deviated_idx];
+            for (RuleSet& new_rule_set : gen_deviants(base_rule_set)) {
+                add_rule_set(new_rule_set);
             }
         }
     }
 
-    bool can_deviate() { // check if there is a rule set to deviate from.
+    // check if there is a rule set to deviate from.
+    bool can_deviate() { 
         return results.size() == 0
             || last_deviated_idx + 1 < results.size();
     }

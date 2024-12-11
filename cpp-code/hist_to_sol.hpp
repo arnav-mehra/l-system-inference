@@ -194,7 +194,7 @@ pair<bool, Histograms> hist_solver_jump(
     vector<Symbol> target
 ) {
     write_inputs(alphabet_size, depth, target);
-    system("julia ../julia-code/hist_solver_jump.jl");
+    system("julia --sysimage ../julia-code/customimage ../julia-code/hist_solver_jump.jl");
     return read_histograms(alphabet_size);
 }
 
