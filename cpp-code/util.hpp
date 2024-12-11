@@ -170,3 +170,22 @@ void printSolverResult(SolverStatus status, RuleSet rule_set) {
         }
     }
 }
+
+struct Timer {
+    int timeout;
+    chrono::steady_clock::time_point start_time;
+
+    Timer(int timeout) : timeout(timeout) {}
+
+    Timer& start() {
+        start_time = chrono::high_resolution_clock::now();
+        return *this;
+    }
+
+    bool timed_out() {
+        auto curr_time = chrono::high_resolution_clock::now();
+        chrono::duration<float> s_double = curr_time - start_time;
+        auto time_elapsed = s_double.count();
+        return time_elapsed >= timeout;
+    }
+};

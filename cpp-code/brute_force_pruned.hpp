@@ -2,16 +2,16 @@
 
 #include "brute_force.hpp"
 
-namespace BFPruned {
+#define DEBUG false
+
+namespace BFP {
 
 struct RuleGen : BF::RuleGen {
-    int depth;
-
     RuleSetHashSet seen;
     Histogram target_hist;
 
     RuleGen(int alphabet_size, int depth, Symbols target)
-        : BF::RuleGen(alphabet_size, target), depth(depth), target_hist(alphabet_size) {
+        : BF::RuleGen(alphabet_size, depth, target), target_hist(alphabet_size) {
         target_hist.digest(target);
     }
 
@@ -54,11 +54,12 @@ struct RuleGen : BF::RuleGen {
 pair<SolverStatus, RuleSet> solver(
     int alphabet_size,
     int depth,
-    vector<Symbol> target
+    vector<Symbol> target,
+    int timeout
 ) {
     RuleGen gen(alphabet_size, depth, target);
 
-    auto [ succ, rule_set ] = gen.find(depth);
+    auto [ succ, rule_set ] = gen.find(timeout);
     if (!succ) {
         return { SolverStatus::UNSAT_NO_RULESET, RuleSet() };
     }

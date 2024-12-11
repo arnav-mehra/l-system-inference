@@ -2,6 +2,44 @@ from enum import Enum
 from collections import Counter
 from z3 import *
 
+IN_FILE = "../inData"
+OUT_FILE = "../outData"
+
+def read_inputs():
+    target_hist = []
+    depth = 0
+    timeout = 0
+
+    import csv
+    with open(IN_FILE, 'r') as fd:
+        reader = csv.reader(fd)
+        for row in reader:
+            for idx, x in enumerate(row):
+                if idx == 0:
+                    timeout = int(x)
+                if idx == 1:
+                    depth = int(x)
+                else:
+                    target_hist.append(int(x))
+
+    # print(target_hist, depth, timeout)
+    return target_hist, depth, timeout
+
+def write_outputs(status, axiom_hist, rule_hists):
+    result = [status]
+    if status == 3:
+        rule_hist_flat = [item for sublist in rule_hists for item in sublist]
+        result += axiom_hist + rule_hist_flat
+    result_string = ",".join([str(x) for x in result])
+    # print(result_string)
+
+    try:
+        outputFile = open(OUT_FILE, 'w')
+        outputFile.write(result_string)
+        outputFile.close()
+    except:
+        print("Failed to write to file buffer, outData!\n")
+
 def get_mat_id(m: str, from_symbol: int, to_symbol: int):
     return Int(m + "[" + str(from_symbol) + "]" + "[" + str(to_symbol) + "]")
 
@@ -88,7 +126,7 @@ def mat_pow(symbols: list, m_prefix: str, p: int):
 
     return And(conds)
 
-def solve(target_hist: list, p: int):
+def solve(target_hist: list, p: int, timeout: int):
     symbols = range(1, len(target_hist) + 1)
     target_len = sum(target_hist)
     new_conds = []
@@ -140,6 +178,7 @@ def solve(target_hist: list, p: int):
     cost_expr = cost(symbols, "m^1", "vi")
 
     solver = Optimize()
+    solver.set("timeout", timeout * 1000)
     solver.add(new_conds)
     solver.minimize(cost_expr)
 
@@ -162,41 +201,18 @@ def solve(target_hist: list, p: int):
             cnt = model[v_rc].as_long()
             axiom_hist.append(cnt)
 
-        return axiom_hist, rule_hists
+        return 3, axiom_hist, rule_hists
+    elif solver.statistics().get_key_value('time') >= timeout:
+        return 2, None, None
     else:
-        return None, None
+        return 0, None, None
 
 if __name__ == '__main__':
-    target_hist = []
-    depth = 0
-
-    import csv
-    with open('../inData', 'r') as fd:
-        reader = csv.reader(fd)
-        for row in reader:
-            for idx, x in enumerate(row):
-                if idx == 0:
-                    depth = int(x)
-                else:
-                    target_hist.append(int(x))
-
+    target_hist, depth, timeout = read_inputs()
     # print(target_hist, depth)
-    axiom_hist, rule_hists = solve(target_hist, depth)
+
+    status, axiom_hist, rule_hists = solve(target_hist, depth, timeout)
     # print(axiom_hist)
     # print(rule_hists)
 
-    result = []
-    if rule_hists:
-        rule_hist_flat = [item for sublist in rule_hists for item in sublist]
-        result = [1] + axiom_hist + rule_hist_flat
-    else:
-        result = [0]
-    result_string = ",".join([str(x) for x in result])
-    # print(result_string)
-
-    try:
-        outputFile = open('../outData', 'w')
-        outputFile.write(result_string)
-        outputFile.close()
-    except:
-        print("Failed to write to file buffer, outData!\n")
+    write_outputs(status, axiom_hist, rule_hists)

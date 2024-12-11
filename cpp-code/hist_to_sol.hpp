@@ -128,14 +128,15 @@ struct RuleGen {
 const char* IN_BUFFER_FILE = "../inData";
 const char* OUT_BUFFER_FILE = "../outData";
 
-void write_inputs(int alphabet_size, int depth, Symbols target) {
+void write_inputs(int alphabet_size, int depth, Symbols target, int timeout) {
     ofstream dataFile;
     dataFile.open(IN_BUFFER_FILE, std::ios::binary | std::ios::in | std::ios::trunc);
 
     Histogram h(alphabet_size);
     h.digest(target);
 
-    string str = to_string(depth);
+    string str = to_string(timeout);
+    str += "," + to_string(depth);
     for (Symbol symbol : h) {
         str += "," + to_string(symbol);
     }
@@ -176,14 +177,15 @@ pair<bool, Histograms> read_histograms(int alphabet_size) {
 
 // HIST SOLVERS
 
-typedef pair<bool, Histograms> (*HistSolver)(int alphabet_size, int depth, vector<Symbol> target);
+typedef pair<bool, Histograms> (*HistSolver)(int alphabet_size, int depth, vector<Symbol> target, int timeout);
 
 pair<bool, Histograms> hist_solver_z3(
     int alphabet_size,
     int depth,
-    vector<Symbol> target
+    vector<Symbol> target,
+    int timeout
 ) {
-    write_inputs(alphabet_size, depth, target);
+    write_inputs(alphabet_size, depth, target, timeout);
     system("python -u ../python-code/hist_solver_z3.py");
     return read_histograms(alphabet_size);
 }
@@ -191,9 +193,10 @@ pair<bool, Histograms> hist_solver_z3(
 pair<bool, Histograms> hist_solver_jump(
     int alphabet_size,
     int depth,
-    vector<Symbol> target
+    vector<Symbol> target,
+    int timeout
 ) {
-    write_inputs(alphabet_size, depth, target);
+    write_inputs(alphabet_size, depth, target, timeout);
     system("julia --sysimage ../julia-code/customimage ../julia-code/hist_solver_jump.jl");
     return read_histograms(alphabet_size);
 }
@@ -218,7 +221,8 @@ template<HistSolver hist_solver, RuleSetSolver ruleset_solver>
 pair<SolverStatus, RuleSet> solver(
     int alphabet_size,
     int depth,
-    vector<Symbol> target
+    vector<Symbol> target,
+    int timeout
 ) {
     auto [succ1, hists] = hist_solver(alphabet_size, depth, target);
     if (!succ1) {

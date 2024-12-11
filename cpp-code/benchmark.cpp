@@ -1,30 +1,26 @@
 #include "hist_to_sol.hpp"
 #include "brute_force.hpp"
+#include "brute_force_pruned.hpp"
 #include "gen_data.hpp"
 #include <iostream>
 #include <chrono>
 #include <thread>
 #include <future>
 
-constexpr auto TIMEOUT = chrono::seconds(100);
+constexpr int TIMEOUT = 45;
 
 typedef pair<SolverStatus, RuleSet> SolverResult;
-typedef SolverResult (*Solver)(int alphabet_size, int depth, std::vector<Symbol> target);
+typedef SolverResult (*Solver)(int alphabet_size, int depth, vector<Symbol> target, int timeout);
 
 vector<Solver> solvers = {
-    // BF::solver,
+    BF::solver,
+    BFP::solver,
     HM::solver<HM::hist_solver_z3, HM::ruleset_solver_matching>,
-    // HM::solver<HM::hist_solver_jump, HM::ruleset_solver_matching>
+    HM::solver<HM::hist_solver_jump, HM::ruleset_solver_matching>
 };
 
 SolverResult test_solver(Solver solver, Data data) {
-    future<SolverResult> result_future = async(launch::async, solver, data.alphabet_size, data.depth, data.target);
-    future_status future_status = result_future.wait_for(TIMEOUT);
-
-    if (future_status != future_status::ready) {
-        return { SolverStatus::UNSAT_TIMEOUT, RuleSet() };
-    }
-    return result_future.get();
+    return solver(data.alphabet_size, data.depth, data.target, TIMEOUT);
 }
 
 vector<pair<Data, vector<SolverResult>>> test(DataGen data_gen, int samples) {

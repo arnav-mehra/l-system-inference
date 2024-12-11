@@ -8,14 +8,15 @@
 namespace BF {
 
 struct RuleGen {
+    int depth;
     int alphabet_size;
     Symbols target;
 
     vector<RuleSet> results;
     int last_deviated_idx;
 
-    RuleGen(int alphabet_size, Symbols target)
-        : alphabet_size(alphabet_size), target(target) {}
+    RuleGen(int alphabet_size, int depth, Symbols target)
+        : alphabet_size(alphabet_size), depth(depth), target(target) {}
 
     virtual void add_rule_set(RuleSet& rule_set) {
         results.push_back(rule_set);
@@ -99,8 +100,10 @@ struct RuleGen {
             || last_deviated_idx + 1 < results.size();
     }
 
-    pair<bool, RuleSet> find(int depth) {
-        while (can_deviate()) { // loop until there are no rule sets to deviate from.
+    pair<SolverStatus, RuleSet> find(int timeout) {
+        auto timer = Timer(timeout).start();
+
+        while (can_deviate() && !timer.timed_out()) { // loop until there are no rule sets to deviate from.
             int prior_len = results.size();
             gen_next_level();
             int new_len = results.size();
@@ -113,23 +116,28 @@ struct RuleGen {
             for (int i = prior_len; i < new_len; i++) {
                 auto& new_rule_set = results[i];
                 if (new_rule_set.produces(target, depth)) {
-                    return { true, new_rule_set };
+                    return { SolverStatus::SAT, new_rule_set };
                 }
             }
         }
 
-        return { false, RuleSet(alphabet_size) };
+        if (timer.timed_out()) {
+            return { SolverStatus::UNSAT_TIMEOUT, RuleSet() };
+        }
+
+        return { SolverStatus::UNSAT_NO_RULESET, RuleSet() };
     }
 };
 
 pair<SolverStatus, RuleSet> solver(
     int alphabet_size,
     int depth,
-    vector<Symbol> target
+    vector<Symbol> target,
+    int timeout
 ) {
-    RuleGen gen(alphabet_size, target);
+    RuleGen gen(alphabet_size, depth, target);
 
-    auto [ succ, rule_set ] = gen.find(depth);
+    auto [ succ, rule_set ] = gen.find(timeout);
     if (!succ) {
         return { SolverStatus::UNSAT_NO_RULESET, RuleSet() };
     }
