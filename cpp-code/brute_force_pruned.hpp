@@ -24,7 +24,7 @@ struct RuleGen : BF::RuleGen {
 
         // prune for each substring sequence.
         Symbols pre_fin_str({ AXIOM_SYMBOL });
-        for (int i = 1; i <= depth - 1; i++) {
+        for (int i = 0; i <= depth - 1; i++) {
             pre_fin_str = new_rule_set.apply_to(pre_fin_str);
         }
         auto target_offset = target.begin();
@@ -60,14 +60,13 @@ pair<SolverStatus, RuleSet> solver(
     RuleGen gen(alphabet_size, depth, target);
 
     auto [ succ, rule_set ] = gen.find(timeout);
-    if (!succ) {
-        return { SolverStatus::UNSAT_NO_RULESET, RuleSet() };
-    }
 
     if (DEBUG) {
         cout << "grammars checked: " << gen.results.size() << "\n";
     }
-    return { SolverStatus::SAT, rule_set };
+    misc_buffer.push_back(gen.results.size());
+
+    return { succ, rule_set };
 }
 
 };

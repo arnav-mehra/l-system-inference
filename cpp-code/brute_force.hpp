@@ -138,14 +138,13 @@ pair<SolverStatus, RuleSet> solver(
     RuleGen gen(alphabet_size, depth, target);
 
     auto [ succ, rule_set ] = gen.find(timeout);
-    if (!succ) {
-        return { SolverStatus::UNSAT_NO_RULESET, RuleSet() };
-    }
 
     if (DEBUG) {
         cout << "grammars checked: " << gen.results.size() << "\n";
     }
-    return { SolverStatus::SAT, rule_set };
+    misc_buffer.push_back(gen.results.size());
+
+    return { succ, rule_set };
 }
 
 };

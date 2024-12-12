@@ -10,10 +10,10 @@ int main() {
 
     auto data_gen = DataGen(depth_range, alphabet_range, complexity_range);
     auto [iter, data] = data_gen.gen();
-    cout << string(data);
+    cout << string(data) << "\n";
 
     auto start = std::chrono::high_resolution_clock::now();
-    auto [ status, rule_set ] = BF::solver(data.alphabet_size, data.depth, data.target, 30);
+    auto [ status, rule_set ] = BFP::solver(data.alphabet_size, data.depth, data.target, 30);
     auto end = std::chrono::high_resolution_clock::now();
     print_solver_result(status, rule_set);
 

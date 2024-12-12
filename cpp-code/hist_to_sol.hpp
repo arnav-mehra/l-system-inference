@@ -145,7 +145,7 @@ void write_inputs(int alphabet_size, int depth, Symbols target, int timeout) {
     dataFile.close();
 }
 
-pair<bool, Histograms> read_histograms(int alphabet_size) {
+pair<SolverStatus, Histograms> read_histograms(int alphabet_size) {
     ifstream file("../outData");
 
     // read CSV into values.
@@ -161,9 +161,10 @@ pair<bool, Histograms> read_histograms(int alphabet_size) {
     Histograms hists(alphabet_size);
 
     // return false if status=failed(0).
-    int status = values[0];
-    if (status == 0) {
-        return { false, hists };
+    auto status = (SolverStatus)values[0];
+    cout << values[0] << ' ' << status << '\n';
+    if (status != SolverStatus::SAT) {
+        return { status, hists };
     }
     values.erase(values.begin());
 
@@ -172,14 +173,14 @@ pair<bool, Histograms> read_histograms(int alphabet_size) {
         int to_symbol = i % alphabet_size;
         hists[from_symbol][to_symbol] = values[i];
     }
-    return { true, hists };
+    return { SolverStatus::SAT, hists };
 }
 
 // HIST SOLVERS
 
-typedef pair<bool, Histograms> (*HistSolver)(int alphabet_size, int depth, vector<Symbol> target, int timeout);
+typedef pair<SolverStatus, Histograms> (*HistSolver)(int alphabet_size, int depth, vector<Symbol> target, int timeout);
 
-pair<bool, Histograms> hist_solver_z3(
+pair<SolverStatus, Histograms> hist_solver_z3(
     int alphabet_size,
     int depth,
     vector<Symbol> target,
@@ -190,7 +191,7 @@ pair<bool, Histograms> hist_solver_z3(
     return read_histograms(alphabet_size);
 }
 
-pair<bool, Histograms> hist_solver_jump(
+pair<SolverStatus, Histograms> hist_solver_jump(
     int alphabet_size,
     int depth,
     vector<Symbol> target,
@@ -225,16 +226,18 @@ pair<SolverStatus, RuleSet> solver(
     int timeout
 ) {
     auto [succ1, hists] = hist_solver(alphabet_size, depth, target, timeout);
-    if (!succ1) {
-        return { SolverStatus::UNSAT_NO_HIST, RuleSet() };
-    }
+    cout << succ1 << '\n';
+    return { succ1, RuleSet() };
+    // if (succ1 != SolverStatus::SAT) {
+    //     return { succ1, RuleSet() };
+    // }
 
-    auto [succ2, rule_set] = ruleset_solver(alphabet_size, depth, hists, target);
-    if (!succ2) {
-        return { SolverStatus::UNSAT_NO_RULESET, RuleSet() };
-    }
+    // auto [succ2, rule_set] = ruleset_solver(alphabet_size, depth, hists, target);
+    // if (!succ2) {
+    //     return { SolverStatus::UNSAT_NO_RULESET, RuleSet() };
+    // }
 
-    return { SolverStatus::SAT, rule_set };
+    // return { SolverStatus::SAT, RuleSet() };
 }
 
 }

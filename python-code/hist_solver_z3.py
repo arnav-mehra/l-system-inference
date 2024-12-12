@@ -17,12 +17,11 @@ def read_inputs():
             for idx, x in enumerate(row):
                 if idx == 0:
                     timeout = int(x)
-                if idx == 1:
+                elif idx == 1:
                     depth = int(x)
                 else:
                     target_hist.append(int(x))
 
-    # print(target_hist, depth, timeout)
     return target_hist, depth, timeout
 
 def write_outputs(status, axiom_hist, rule_hists):

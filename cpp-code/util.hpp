@@ -11,6 +11,8 @@ using namespace std;
 
 typedef int Symbol;
 
+vector<int> misc_buffer;
+
 const auto AXIOM_SYMBOL = Symbol(0);
 
 struct Histogram : vector<int> {
@@ -59,6 +61,16 @@ struct Symbols : vector<Symbol> {
             hist[symbol]++;
         }
         return hist;
+    }
+
+    bool is_at(Symbols& target, int offset) {
+        if (size() > target.size() - offset) return false;
+
+        bool matches = true;
+        for (int i = 0; i < size(); i++) {
+            matches &= at(i) == target[i + offset];
+        }
+        return matches;
     }
 
     operator string() const {
@@ -177,7 +189,7 @@ string solver_status_to_string(SolverStatus status) {
 void print_solver_result(SolverStatus status, RuleSet rule_set) {
     cout << solver_status_to_string(status) << "\n";
     if (status == SolverStatus::SAT) {
-        cout << string(rule_set);
+        cout << string(rule_set) << "\n";
     }
 }
 

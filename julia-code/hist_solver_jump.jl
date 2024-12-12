@@ -58,7 +58,7 @@ function pow(M, p)
 end
 
 (target_hist, D, timeout) = read_inputs()
-# println(target_hist, D)
+println(target_hist, D, timeout)
 
 N = length(target_hist)
 L = sum(target_hist)
