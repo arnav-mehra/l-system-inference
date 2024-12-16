@@ -14,22 +14,22 @@ typedef SolverResult (*Solver)(int alphabet_size, int depth, vector<Symbol> targ
 
 vector<Solver> solvers = {
     // BF::solver,
-    // BFP::solver,
-    HM::solver<HM::hist_solver_z3, HM::ruleset_solver_matching>,
+    BFP::solver,
+    // HM::solver<HM::hist_solver_z3, HM::ruleset_solver_matching>,
     HM::solver<HM::hist_solver_jump, HM::ruleset_solver_matching>,
 };
 
 vector<string> solver_names = {
     // "enum",
-    // "enum_pruned",
-    "count_order_z3",
+    "enum_pruned",
+    // "count_order_z3",
     "count_order_jump",
 };
 
 vector<vector<string>> solver_misc_fields = {
     // { "grammars_checked" },
-    // { "grammars_checked" },
-    {},
+    { "grammars_checked" },
+    // {},
     {},
 };
 
@@ -122,7 +122,7 @@ int main() {
 
     auto data_gen = DataGen(depth_range, alphabet_range, complexity_range);
 
-    auto table = test(data_gen, 5);
+    auto table = test(data_gen, 6);
 
     write_table(table);
 }

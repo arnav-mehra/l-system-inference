@@ -6,8 +6,6 @@
 #include <sstream>
 #include <string>
 
-#define DEBUG false
-
 namespace HM {
 
 struct RuleGen {

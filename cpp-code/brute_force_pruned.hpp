@@ -2,8 +2,6 @@
 
 #include "brute_force.hpp"
 
-#define DEBUG false
-
 namespace BFP {
 
 struct RuleGen : BF::RuleGen {
@@ -11,17 +9,19 @@ struct RuleGen : BF::RuleGen {
     Histogram target_hist;
 
     RuleGen(int alphabet_size, int depth, Symbols target)
-        : BF::RuleGen(alphabet_size, depth, target), target_hist(alphabet_size) {
-        target_hist.digest(target);
-    }
+        : BF::RuleGen(alphabet_size, depth, target),
+        target_hist(Histogram(alphabet_size).digest(target)) {}
 
-    void add_rule_set(RuleSet& new_rule_set) override {
+    bool is_transposition(RuleSet& new_rule_set) {
         // prune transpositions
         if (seen.find(new_rule_set) != seen.end()) {
-            return;
+            return true;
         }
         seen.insert(new_rule_set);
+        return false;
+    }
 
+    bool is_sterile(RuleSet& new_rule_set) {
         // prune for each substring sequence.
         Symbols pre_fin_str({ AXIOM_SYMBOL });
         for (int i = 0; i <= depth - 1; i++) {
@@ -35,11 +35,11 @@ struct RuleGen : BF::RuleGen {
 
             if (i == 0) {
                 if (new_iter != target.begin()) {
-                    return;
+                    return true;
                 }
             } else {
                 if (new_iter == target.end()) {
-                    return;
+                    return true;
                 }
             }
 
@@ -47,26 +47,15 @@ struct RuleGen : BF::RuleGen {
             target_offset += goal.size();
         }
 
+        return false;
+    }
+
+    virtual void add_result(RuleSet& new_rule_set) override {
+        if (is_transposition(new_rule_set)) return;
+        if (is_sterile(new_rule_set)) return;
+
         results.push_back(new_rule_set);
     }
 };
-
-pair<SolverStatus, RuleSet> solver(
-    int alphabet_size,
-    int depth,
-    vector<Symbol> target,
-    int timeout
-) {
-    RuleGen gen(alphabet_size, depth, target);
-
-    auto [ succ, rule_set ] = gen.find(timeout);
-
-    if (DEBUG) {
-        cout << "grammars checked: " << gen.results.size() << "\n";
-    }
-    misc_buffer.push_back(gen.results.size());
-
-    return { succ, rule_set };
-}
 
 };

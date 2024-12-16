@@ -6,6 +6,9 @@
 #include <algorithm>
 #include <iostream>
 #include <chrono>
+#include <numeric>
+
+#define DEBUG true
 
 using namespace std;
 
@@ -20,10 +23,22 @@ struct Histogram : vector<int> {
         this->resize(alphabet_size + 1, 0);
     }
 
-    void digest(vector<Symbol> symbols) {
+    Histogram& digest(vector<Symbol> symbols) {
         for (Symbol symbol : symbols) {
             this->at(symbol)++;
         }
+        return *this;
+    }
+
+    Histogram& digest(vector<Symbol>::const_iterator start, vector<Symbol>::const_iterator end) {
+        for (auto iter = start; iter != end; iter++) {
+            this->at(*iter)++;
+        }
+        return *this;
+    }
+
+    int sum() {
+        return accumulate(begin(), end(), 0);
     }
 
     operator string() const {
@@ -53,9 +68,12 @@ struct Histograms : vector<Histogram> {
 
 struct Symbols : vector<Symbol> {
     Symbols() {}
-    Symbols(vector<Symbol> symbols) : vector<Symbol>(symbols) {}
+    Symbols(const vector<Symbol> symbols) : vector<Symbol>(symbols) {}
+    
+    template<typename Iterator>
+    Symbols(const Iterator start, const Iterator end) : vector<Symbol>(start, end) {}
 
-    Histogram hist(int alphabet_size) {
+    Histogram hist(const int alphabet_size) {
         Histogram hist(alphabet_size);
         for (Symbol symbol : *this) {
             hist[symbol]++;
@@ -63,7 +81,7 @@ struct Symbols : vector<Symbol> {
         return hist;
     }
 
-    bool is_at(Symbols& target, int offset) {
+    bool is_at(const Symbols& target, const int offset) {
         if (size() > target.size() - offset) return false;
 
         bool matches = true;
@@ -107,7 +125,7 @@ struct RuleSet : vector<Symbols> {
         return new_symbols;
     }
 
-    pair<bool, int> produced_iter(Symbols& goal, int depth, Symbol symbol, int idx) {
+    pair<bool, int> produced_iter(const Symbols& goal, int depth, Symbol symbol, int idx) {
         // cout << depth << ' ' << symbol << ' ' << idx << '\n';
         if (idx >= goal.size()) return { false, idx + 1 };
 
@@ -126,7 +144,7 @@ struct RuleSet : vector<Symbols> {
         return { true, idx };
     }
 
-    bool produces(Symbols& target, int depth) {
+    bool produces(const Symbols& target, int depth) {
         auto [ succ, idx ] = produced_iter(target, depth + 1, AXIOM_SYMBOL, 0);
         return succ && idx == target.size();
     }
@@ -204,10 +222,13 @@ struct Timer {
         return *this;
     }
 
-    bool timed_out() {
+    double time_left() {
         auto curr_time = chrono::high_resolution_clock::now();
         chrono::duration<double> duration = curr_time - start_time;
-        double time_elapsed = duration.count();
-        return time_elapsed >= timeout;
+        return (double)timeout - duration.count();
+    }
+
+    bool timed_out() {
+        return time_left() <= 0;
     }
 };
